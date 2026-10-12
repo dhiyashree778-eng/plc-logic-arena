@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PLC Logic Arena</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/auth.js"></script>
+  <script>Auth.require("student","staff","admin");</script>
+</head>
+<body>
+<header class="top">
+  <div class="brand">PLC LOGIC ARENA<small>Industrial automation test bench</small></div>
+  <nav class="tabs" id="tabs">
+    <button data-tab="overview" class="active">Overview</button>
+    <button data-tab="editor">Ladder editor</button>
+    <button data-tab="plc">Virtual PLC</button>
+    <button data-tab="bench">Test bench</button>
+    <button data-tab="results">Results</button>
+    <button data-tab="challenges">Challenges</button>
+    <button data-tab="board">Leaderboard</button>
+  </nav>
+  <div class="status">
+    <span id="chName"></span>
+    <span class="badge stop" id="cpu">CPU: STOP</span>
+    <span id="scanInfo" class="mono">Scans: 0</span>
+  </div>
+  <div class="user"><span id="who"></span><button class="btn sm" id="logout">Sign out</button></div>
+</header>
+
+<main>
+  <!-- Overview -->
+  <section class="tab active" id="tab-overview">
+    <div class="hero">
+      <h1>Master PLC programming with live hardware checks</h1>
+      <p class="lead">Build ladder logic, run it on a virtual controller with animated machines, and grade it against automated test vectors. The scan cycle is 50 ms: read inputs, solve rungs top to bottom, write outputs.</p>
+      <div class="toolbar">
+        <button class="btn primary" data-go="editor">Open ladder editor</button>
+        <button class="btn" data-go="bench">Run test bench</button>
+        <button class="btn" data-go="challenges">Browse challenges</button>
+      </div>
+    </div>
+    <div class="grid">
+      <div class="card feature"><h3>Ladder editor</h3><p>NO and NC contacts, parallel branches, coils, latch, unlatch and TON timers. Power flow lights up green while the CPU runs.</p><button class="btn sm" data-go="editor">Open editor</button></div>
+      <div class="card feature"><h3>Virtual PLC</h3><p>Push buttons, switches, output lamps, motors, a press and a sump tank that respond to your program in real time.</p><button class="btn sm" data-go="plc">Open rack</button></div>
+      <div class="card feature"><h3>Test bench</h3><p>Resting state, seal-in, stop priority, interlocks and timer delays checked step by step with clear pass or fail messages.</p><button class="btn sm" data-go="bench">Run tests</button></div>
+      <div class="card feature"><h3>Challenges</h3><p>Five problems from beginner to advanced, from a DOL starter to a delayed conveyor start.</p><button class="btn sm" data-go="challenges">Browse</button></div>
+    </div>
+  </section>
+
+  <!-- Ladder editor -->
+  <section class="tab" id="tab-editor">
+    <div class="ch-bar"><h2 id="edTitle"></h2><span class="tier" id="edTier"></span></div>
+    <p class="lead" id="edDesc"></p>
+    <div class="iomap" id="iomap"></div>
+    <div class="toolbar">
+      <button class="btn" id="addRung">+ Add rung</button>
+      <button class="btn" id="undo">Undo</button>
+      <button class="btn" id="redo">Redo</button>
+      <button class="btn" id="clear">Clear</button>
+      <button class="btn" id="validate">Validate</button>
+      <button class="btn" id="reset">Reset</button>
+      <button class="btn" id="solution">Load reference solution</button>
+      <span class="grow"></span>
+      <button class="btn" id="save">Save</button>
+      <button class="btn" id="export">Export JSON</button>
+      <button class="btn" id="import">Import JSON</button>
+      <input type="file" id="importFile" accept="application/json" hidden>
+      <button class="btn primary" id="runLogic">Run logic</button>
+    </div>
+    <div class="msgs" id="edMsgs" aria-live="polite"></div>
+    <div id="ladder"></div>
+  </section>
+
+  <!-- Virtual PLC -->
+  <section class="tab" id="tab-plc">
+    <div class="ch-bar"><h2>Virtual PLC</h2></div>
+    <div class="toolbar">
+      <button class="btn primary" id="cpuRun">Run CPU</button>
+      <button class="btn" id="cpuStop">Stop CPU</button>
+      <span class="mono" id="cpuNote" style="color:var(--mute)"></span>
+    </div>
+    <div class="rack">
+      <div class="card"><h3>Inputs</h3><div id="inputs"></div></div>
+      <div class="card"><h3>Outputs</h3><div id="outputs"></div></div>
+      <div class="card proc"><div><div id="viz" style="display:grid;place-items:center"></div><div class="sim" id="sim"></div></div></div>
+    </div>
+  </section>
+
+  <!-- Test bench -->
+  <section class="tab" id="tab-bench">
+    <div class="ch-bar"><h2>Test bench</h2></div>
+    <p class="lead" id="benchDesc"></p>
+    <div class="toolbar"><button class="btn primary" id="runTests">Run automated tests</button><span id="benchSum" class="mono"></span></div>
+    <div class="msgs" id="benchMsgs"></div>
+    <div class="card" style="padding:0"><ul class="tests" id="tests"></ul></div>
+  </section>
+
+  <!-- Results -->
+  <section class="tab" id="tab-results">
+    <div class="ch-bar"><h2>Results</h2></div>
+    <div id="resultsBody"></div>
+  </section>
+
+  <!-- Challenges -->
+  <section class="tab" id="tab-challenges">
+    <div class="ch-bar"><h2>Challenges</h2></div>
+    <div class="grid cards" id="chGrid"></div>
+  </section>
+
+  <!-- Leaderboard -->
+  <section class="tab" id="tab-board">
+    <div class="ch-bar"><h2>Leaderboard</h2></div>
+    <div class="card" id="boardBody"></div>
+  </section>
+</main>
+
+<dialog id="elDlg">
+  <form method="dialog" id="elForm">
+    <h3 id="elTitle">Configure component</h3>
+    <div class="field"><label for="elType">Type</label><select id="elType"></select></div>
+    <div class="field"><label for="elAddr">Address (I0.0, Q0.0, M0.0, T0)</label><input id="elAddr" list="addrs" autocomplete="off"><datalist id="addrs"></datalist></div>
+    <div class="field" id="presetWrap" hidden><label for="elPreset">Preset (ms)</label><input id="elPreset" type="number" min="50" step="50"></div>
+    <div class="row">
+      <button class="btn danger" type="button" id="elDel">Delete</button>
+      <button class="btn" type="button" id="elCancel">Cancel</button>
+      <button class="btn primary" type="submit" id="elApply">Apply</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="subDlg">
+  <form method="dialog" id="subForm">
+    <h3>Post score to leaderboard</h3>
+    <p class="mono" id="subInfo" style="color:var(--mute)"></p>
+    <div class="field"><label for="subName">Name or alias</label><input id="subName"></div>
+    <div class="field"><label for="subOrg">Role or specialization</label><input id="subOrg"></div>
+    <div class="row"><button class="btn" type="button" id="subCancel">Cancel</button><button class="btn primary" type="submit">Post score</button></div>
+  </form>
+</dialog>
+
+<script src="js/engine.js"></script>
+<script src="js/challenges.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

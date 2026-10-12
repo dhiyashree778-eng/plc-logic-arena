@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · PLC Logic Arena</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="login">
+  <section class="login-art">
+    <div>
+      <h1>PLC Logic Arena</h1>
+    </div>
+    <svg id="rung" class="rung-svg" viewBox="0 0 560 170" role="img" aria-label="Motor starter ladder rung that energises when you fill in the form">
+      <path class="w" d="M20 10v150M540 10v150"/>
+      <path class="w" d="M20 50h70M150 50h70M220 50h200M420 50h30M20 50"/>
+      <path class="c" d="M90 30v40M150 30v40"/><text x="96" y="22">START</text>
+      <path class="w" d="M60 50v70h30M150 120h70v-70"/>
+      <path class="c" d="M90 100v40M150 100v40"/><text x="95" y="92">SEAL</text>
+      <path class="c" d="M260 30v40M320 30v40"/><path class="c" d="M255 70l70-40"/><text x="265" y="22">STOP</text>
+      <path class="w" d="M320 50h100M450 50h90"/>
+      <circle class="lamp" cx="435" cy="50" r="20"/><circle cx="435" cy="50" r="20" fill="none" stroke="#4a5762" stroke-width="3"/>
+      <text x="410" y="95">MOTOR</text>
+    </svg>
+    <p>Build ladder logic, run it on a virtual controller and check it against automated tests. Students, staff and administrators each sign in with their own account.</p>
+  </section>
+
+  <section class="login-form">
+    <h2 id="title">Sign in</h2>
+    <p class="sub" id="sub">Welcome back. Pick up where you left off.</p>
+    <div class="seg three roles" role="tablist" aria-label="Account type">
+      <button type="button" data-role="student" class="active" role="tab">Student</button>
+      <button type="button" data-role="staff" role="tab">Staff</button>
+      <button type="button" data-role="admin" role="tab">Admin</button>
+    </div>
+    <div class="seg" id="modeSeg" role="tablist">
+      <button type="button" id="tabIn" class="active" role="tab">Sign in</button>
+      <button type="button" id="tabUp" role="tab">Create account</button>
+    </div>
+
+    <div id="formIn">
+      <div class="field"><label for="liId">Username or email</label><input id="liId" autocomplete="username"></div>
+      <div class="field"><label for="liPw">Password</label><input id="liPw" type="password" autocomplete="current-password"></div>
+      <p class="hint" id="adminHint" hidden>Admin accounts are created by the system, not self-registered.</p>
+      <p class="err" id="errIn" role="alert"></p>
+      <button class="btn primary" id="goIn" type="button">Sign in</button>
+    </div>
+
+    <div id="formUp" hidden>
+      <div class="field"><label for="suUser">Username</label><input id="suUser" autocomplete="username"></div>
+      <div class="field"><label for="suMail">Email address</label><input id="suMail" type="email" autocomplete="email"></div>
+      <div class="field"><label for="suPw">Password (at least 6 characters)</label><input id="suPw" type="password" autocomplete="new-password"></div>
+      <div class="field"><label for="suOrg" id="suOrgLbl">Organization or specialization (optional)</label><input id="suOrg"></div>
+      <div class="field" id="codeWrap" hidden><label for="suCode">Staff access code</label><input id="suCode" autocomplete="off"></div>
+      <p class="err" id="errUp" role="alert"></p>
+      <button class="btn primary" id="goUp" type="button">Create account</button>
+    </div>
+
+    <div class="guest"><button type="button" id="guest">Continue as guest</button></div>
+  </section>
+</div>
+
+<script src="js/auth.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const rung = $('rung');
+
+if (Auth.session()) location.replace('app.html');
+
+let role = 'student', signup = false;
+const COPY = {
+  student: { in: 'Welcome back. Pick up where you left off.', up: 'Saved programs and leaderboard scores stay with your account on this browser.', org: 'Organization or specialization (optional)' },
+  staff:   { in: 'Sign in to manage your classes and review student work.', up: 'Staff accounts need an access code from your administrator.', org: 'Department (optional)' },
+  admin:   { in: 'Administrator access. Authorised users only.', up: '', org: '' }
+};
+function render() {
+  const up = signup && role !== 'admin';
+  $('formIn').hidden = up; $('formUp').hidden = !up;
+  document.querySelectorAll('[data-role]').forEach(b => b.classList.toggle('active', b.dataset.role === role));
+  $('modeSeg').hidden = role === 'admin';
+  $('tabIn').classList.toggle('active', !up); $('tabUp').classList.toggle('active', up);
+  $('codeWrap').hidden = role !== 'staff';
+  $('suOrgLbl').textContent = COPY[role].org || COPY.student.org;
+  $('adminHint').hidden = role !== 'admin';
+  $('guest').parentElement.hidden = role !== 'student';
+  const label = role[0].toUpperCase() + role.slice(1);
+  $('title').textContent = up ? `Create ${label.toLowerCase()} account` : `${label} sign in`;
+  $('sub').textContent = up ? COPY[role].up : COPY[role].in;
+  $('errIn').textContent = ''; $('errUp').textContent = '';
+  energise();
+}
+function mode(up) { signup = up; render(); }
+function energise() {
+  const up = !$('formUp').hidden;
+  const ok = up ? $('suUser').value && $('suMail').value && $('suPw').value && (role !== 'staff' || $('suCode').value) : $('liId').value && $('liPw').value;
+  rung.classList.toggle('on', !!ok);
+}
+function enter() { rung.classList.add('on'); setTimeout(() => location.replace('app.html'), 450); }
+
+document.querySelectorAll('[data-role]').forEach(b => b.onclick = () => { role = b.dataset.role; if (role === 'admin') signup = false; render(); });
+$('tabIn').onclick = () => mode(false);
+$('tabUp').onclick = () => mode(true);
+document.querySelectorAll('input').forEach(i => i.addEventListener('input', energise));
+
+async function doIn() {
+  $('errIn').textContent = '';
+  try { await Auth.login($('liId').value, $('liPw').value, role); enter(); }
+  catch (e) { $('errIn').textContent = e.message; rung.classList.remove('on'); }
+}
+async function doUp() {
+  $('errUp').textContent = '';
+  try { await Auth.register({ username: $('suUser').value, email: $('suMail').value, password: $('suPw').value, org: $('suOrg').value, role, code: $('suCode').value }); enter(); }
+  catch (e) { $('errUp').textContent = e.message; rung.classList.remove('on'); }
+}
+$('goIn').onclick = doIn; $('goUp').onclick = doUp;
+$('liPw').addEventListener('keydown', e => { if (e.key === 'Enter') doIn(); });
+$('suCode').addEventListener('keydown', e => { if (e.key === 'Enter') doUp(); });
+$('suPw').addEventListener('keydown', e => { if (e.key === 'Enter') doUp(); });
+$('guest').onclick = () => { Auth.guest(); enter(); };
+</script>
+</body>
+</html>
